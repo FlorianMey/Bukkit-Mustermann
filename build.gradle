@@ -1,0 +1,74 @@
+import groovy.json.JsonSlurper
+
+apply plugin: 'java'
+configurations {
+    ftpAntTask
+}
+
+sourceCompatibility = 1.8
+version = '0.1'
+
+ext {
+    title = "Mustermann"
+    mainClass = "com.j4id.bukkit.mustermann.Main"
+    jarName = title.toLowerCase() + '-' + version + '.jar'
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': title
+        attributes 'Implementation-Version': version
+        attributes 'Main-Class': project.mainClass
+    }
+
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven {
+        url 'http://repo.bukkit.org/content/groups/public/'
+    }
+}
+
+dependencies {
+    compile 'org.apache.commons:commons-lang3:3.3.2'
+    compile 'commons-io:commons-io:2.4'
+    compile 'commons-configuration:commons-configuration:1.10'
+    compile 'commons-net:commons-net:3.3'
+    compile 'org.apache.httpcomponents:httpclient:4.5.1'
+    compile 'org.apache.commons:commons-collections4:4.0'
+    compile 'org.bukkit:bukkit:1.7.9-R0.2'
+
+    ftpAntTask("org.apache.ant:ant-commons-net:1.8.4") {
+        module("commons-net:commons-net:1.4.1") {
+            dependencies "oro:oro:2.0.8:jar"
+        }
+    }
+
+}
+
+task pack(dependsOn: classes, type: Jar) {
+
+    archiveName = jarName
+    from files(sourceSets.main.output.classesDir)
+    from { configurations.compile.collect { zipTree(it) } }
+
+}
+
+task upload(dependsOn: pack) << {
+
+    def credentialsFile = new File("server.json")
+    def credentials = new JsonSlurper().parseText(credentialsFile.text);
+
+    ant {
+        taskdef(name: 'ftp',
+                classname: 'org.apache.tools.ant.taskdefs.optional.net.FTP',
+                classpath: configurations.ftpAntTask.asPath)
+        ftp(server: credentials.host, userid: credentials.username, password: credentials.password, port: credentials.port, remoteDir: credentials.directory, passive: 'yes', verbose: 'yes') {
+            fileset(file: 'build/libs/' + jarName)
+        }
+    }
+
+}

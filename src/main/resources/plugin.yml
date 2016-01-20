@@ -1,0 +1,7 @@
+name: Mustermann
+main: com.j4id.bukkit.mustermann.MustermannPlugin
+version: 0.1
+commands:
+  mustermann:
+    description: Musters men
+    usage: "Usage abc"
